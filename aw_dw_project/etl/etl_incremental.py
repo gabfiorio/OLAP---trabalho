@@ -178,50 +178,78 @@ def extract_to_staging(table_name: str, full_load: bool) -> tuple[int, datetime 
     log.info(f"[EXTRACT] {table_name}: {len(df)} linhas -> stg.{table_name} (novo watermark {new_watermark})")
     return len(df), new_watermark
 
-def load_dim_scd2(table: str, bk_col: str, attr_cols: list[str], stg_table: str):
-    """Aplica SCD Tipo 2: expira a versão vigente e insere uma nova quando há mudança."""
+def load_dim_scd2(
+    table: str,
+    pk_col: str,
+    bk_col: str,
+    attr_cols: list[str],
+    stg_table: str,
+):
+    """Aplica SCD Tipo 2 usando explicitamente a chave substituta da dimensão."""
     with dw_engine.begin() as conn:
         staged = pd.read_sql(text(f"SELECT * FROM stg.{stg_table}"), conn)
         if staged.empty:
             return 0
-        today = datetime.now().date()
+
+        hoje = datetime.now().date()
         n_changed = 0
+
         for _, r in staged.iterrows():
-            new_hash = row_hash(*[r[c] for c in attr_cols])
+            novo_hash = row_hash(*[r[c] for c in attr_cols])
+
             current = conn.execute(
                 text(
-                    f"SELECT {table.split('.')[-1]}_key, hash_linha FROM {table} "
+                    f"SELECT {pk_col}, hash_linha "
+                    f"FROM {table} "
                     f"WHERE {bk_col} = :bk AND eh_vigente = TRUE"
                 ),
                 {"bk": r[bk_col]},
             ).fetchone()
 
             if current is None:
-                cols = ", ".join([bk_col] + attr_cols + ["hash_linha", "data_efetiva"])
-                placeholders = ", ".join([f":{c}" for c in attr_cols] + [":bk", ":h", ":eff"])
                 conn.execute(
                     text(
-                        f"INSERT INTO {table} ({bk_col}, {', '.join(attr_cols)}, hash_linha, data_efetiva) "
+                        f"INSERT INTO {table} "
+                        f"({bk_col}, {', '.join(attr_cols)}, hash_linha, data_efetiva) "
                         f"VALUES (:bk, {', '.join(f':{c}' for c in attr_cols)}, :h, :eff)"
                     ),
-                    {**{c: r[c] for c in attr_cols}, "bk": r[bk_col], "h": new_hash, "eff": today},
+                    {
+                        **{c: r[c] for c in attr_cols},
+                        "bk": r[bk_col],
+                        "h": novo_hash,
+                        "eff": hoje,
+                    },
                 )
                 n_changed += 1
-            elif current.hash_linha != new_hash:
-                conn.execute(
-                    text(f"UPDATE {table} SET data_fim = :d, eh_vigente = FALSE WHERE {bk_col.split('_')[0]}_key = :k"),
-                    {"d": today, "k": current[0]},
-                )
-                conn.execute(
-                    text(
-                        f"INSERT INTO {table} ({bk_col}, {', '.join(attr_cols)}, hash_linha, data_efetiva) "
-                        f"VALUES (:bk, {', '.join(f':{c}' for c in attr_cols)}, :h, :eff)"
-                    ),
-                    {**{c: r[c] for c in attr_cols}, "bk": r[bk_col], "h": new_hash, "eff": today},
-                )
-                n_changed += 1
-        return n_changed
 
+            elif current.hash_linha != novo_hash:
+                chave_substituta = current[0]
+
+                conn.execute(
+                    text(
+                        f"UPDATE {table} "
+                        f"SET data_fim = :d, eh_vigente = FALSE "
+                        f"WHERE {pk_col} = :k"
+                    ),
+                    {"d": hoje, "k": chave_substituta},
+                )
+
+                conn.execute(
+                    text(
+                        f"INSERT INTO {table} "
+                        f"({bk_col}, {', '.join(attr_cols)}, hash_linha, data_efetiva) "
+                        f"VALUES (:bk, {', '.join(f':{c}' for c in attr_cols)}, :h, :eff)"
+                    ),
+                    {
+                        **{c: r[c] for c in attr_cols},
+                        "bk": r[bk_col],
+                        "h": novo_hash,
+                        "eff": hoje,
+                    },
+                )
+                n_changed += 1
+
+        return n_changed
 
 def load_dim_scd1(table: str, bk_col: str, attr_cols: list[str], stg_table: str):
     """Aplica SCD Tipo 1 (UPSERT) para dimensões de baixa volatilidade."""
@@ -296,13 +324,13 @@ def load_fact_sales():
         return len(staged)
         
 DIM_JOBS = [
-    dict(name="cliente", table="dw.dim_cliente", bk="id_cliente",
+    dict(name="cliente", table="dw.dim_cliente", pk="chave_cliente", bk="id_cliente",
          attrs=["nome_cliente", "tipo_cliente", "cidade", "estado_provincia", "pais_regiao", "codigo_postal"],
          scd_type=2),
-    dict(name="produto", table="dw.dim_produto", bk="id_produto",
+    dict(name="produto", table="dw.dim_produto", pk="chave_produto", bk="id_produto",
          attrs=["nome_produto", "numero_produto", "cor", "tamanho", "nome_subcategoria",
                 "nome_categoria", "custo_padrao", "preco_tabela"], scd_type=2),
-    dict(name="vendedor", table="dw.dim_vendedor", bk="id_funcionario",
+    dict(name="vendedor", table="dw.dim_vendedor", pk="chave_vendedor", bk="id_funcionario",
          attrs=["nome_completo", "cargo"], scd_type=2),
     dict(name="territorio", table="dw.dim_territorio", bk="id_territorio",
          attrs=["nome_territorio", "codigo_pais_regiao", "grupo_territorio"], scd_type=1),
@@ -330,7 +358,7 @@ def run(full_load: bool = False):
         if rows == 0:
             continue
         if job["scd_type"] == 2:
-            n = load_dim_scd2(job["table"], job["bk"], job["attrs"], job["name"])
+            n = load_dim_scd2(job["table"], job["pk"], job["bk"], job["attrs"], job["name"])
         else:
             n = load_dim_scd1(job["table"], job["bk"], job["attrs"], job["name"])
         log.info(f"[LOAD DIM] {job['table']}: {n} linhas aplicadas (SCD{job['scd_type']})")

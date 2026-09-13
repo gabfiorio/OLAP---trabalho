@@ -13,125 +13,132 @@ skinparam class {
   ArrowColor #666666
 }
 
-entity "FACT_SALES" as fact_sales <<fact>> {
-  * sales_key : bigint <<PK>>
+entity "FATO_VENDAS" as fato_vendas <<fact>> {
+  * chave_venda : bigint <<PK>>
   --
-  # order_date_key : int <<FK>>
-  # ship_date_key : int <<FK>>
-  # due_date_key : int <<FK>>
-  # customer_key : int <<FK>>
-  # product_key : int <<FK>>
-  # salesperson_key : int <<FK>>
-  # territory_key : int <<FK>>
-  # promotion_key : int <<FK>>
-  # ship_method_key : int <<FK>>
+  # chave_data_pedido : int <<FK>>
+  # chave_data_envio : int <<FK>>
+  # chave_data_vencimento : int <<FK>>
+  # chave_cliente : int <<FK>>
+  # chave_produto : int <<FK>>
+  # chave_vendedor : int <<FK>>
+  # chave_territorio : int <<FK>>
+  # chave_promocao : int <<FK>>
+  # chave_metodo_envio : int <<FK>>
   --
-  sales_order_number : varchar (DD)
-  sales_order_line_number : smallint (DD)
-  order_qty : int
-  unit_price : numeric
-  unit_price_discount : numeric
-  discount_amount : numeric
-  line_total : numeric
-  standard_cost : numeric
-  tax_amt : numeric
-  freight : numeric
+  numero_pedido_venda : varchar
+  numero_linha_pedido : smallint
+  id_detalhe_pedido : int
+  quantidade_pedido : int
+  preco_unitario : numeric
+  desconto_preco_unitario : numeric
+  valor_desconto : numeric
+  total_linha : numeric
+  custo_padrao : numeric
+  valor_imposto : numeric
+  frete : numeric
+  data_modificacao_origem : timestamp
+  marca_tempo_carregamento : timestamp
 }
 
-entity "DIM_DATE" as dim_date <<dim>> {
-  * date_key : int <<PK>>
+entity "DIM_DATA (SCD0)" as dim_data <<dim>> {
+  * chave_data : int <<PK>>
   --
-  full_date : date
-  day_of_month : smallint
-  day_name : varchar
-  month_number : smallint
-  month_name : varchar
-  quarter : smallint
-  year : smallint
-  is_weekend : boolean
-  fiscal_year : smallint
-  fiscal_quarter : smallint
+  data_completa : date
+  dia_mes : smallint
+  nome_dia : varchar
+  dia_semana : smallint
+  numero_mes : smallint
+  nome_mes : varchar
+  trimestre : smallint
+  ano : smallint
+  eh_fim_de_semana : boolean
+  ano_fiscal : smallint
+  trimestre_fiscal : smallint
 }
 
-entity "DIM_CUSTOMER (SCD2)" as dim_customer <<dim>> {
-  * customer_key : int <<PK>>
+entity "DIM_CLIENTE (SCD2)" as dim_cliente <<dim>> {
+  * chave_cliente : int <<PK>>
   --
-  customer_id : int (BK)
-  customer_name : varchar
-  customer_type : varchar
-  city : varchar
-  state_province : varchar
-  country_region : varchar
-  postal_code : varchar
-  effective_date : date
-  end_date : date
-  is_current : boolean
+  id_cliente : int (BK)
+  nome_cliente : varchar
+  tipo_cliente : varchar
+  cidade : varchar
+  estado_provincia : varchar
+  pais_regiao : varchar
+  codigo_postal : varchar
+  data_efetiva : date
+  data_fim : date
+  eh_vigente : boolean
+  hash_linha : varchar
 }
 
-entity "DIM_PRODUCT (SCD2)" as dim_product <<dim>> {
-  * product_key : int <<PK>>
+entity "DIM_PRODUTO (SCD2)" as dim_produto <<dim>> {
+  * chave_produto : int <<PK>>
   --
-  product_id : int (BK)
-  product_name : varchar
-  product_number : varchar
-  color : varchar
-  size : varchar
-  subcategory_name : varchar
-  category_name : varchar
-  standard_cost : numeric
-  list_price : numeric
-  effective_date : date
-  end_date : date
-  is_current : boolean
+  id_produto : int (BK)
+  nome_produto : varchar
+  numero_produto : varchar
+  cor : varchar
+  tamanho : varchar
+  nome_subcategoria : varchar
+  nome_categoria : varchar
+  custo_padrao : numeric
+  preco_tabela : numeric
+  data_efetiva : date
+  data_fim : date
+  eh_vigente : boolean
+  hash_linha : varchar
 }
 
-entity "DIM_SALESPERSON (SCD2)" as dim_salesperson <<dim>> {
-  * salesperson_key : int <<PK>>
+entity "DIM_VENDEDOR (SCD2)" as dim_vendedor <<dim>> {
+  * chave_vendedor : int <<PK>>
   --
-  employee_id : int (BK)
-  full_name : varchar
-  job_title : varchar
-  effective_date : date
-  end_date : date
-  is_current : boolean
+  id_funcionario : int (BK)
+  nome_completo : varchar
+  cargo : varchar
+  data_efetiva : date
+  data_fim : date
+  eh_vigente : boolean
+  hash_linha : varchar
 }
 
-entity "DIM_TERRITORY" as dim_territory <<dim>> {
-  * territory_key : int <<PK>>
+entity "DIM_TERRITORIO (SCD1)" as dim_territorio <<dim>> {
+  * chave_territorio : int <<PK>>
   --
-  territory_id : int (BK)
-  territory_name : varchar
-  country_region_code : varchar
-  territory_group : varchar
+  id_territorio : int (BK)
+  nome_territorio : varchar
+  codigo_pais_regiao : varchar
+  grupo_territorio : varchar
 }
 
-entity "DIM_PROMOTION" as dim_promotion <<dim>> {
-  * promotion_key : int <<PK>>
+entity "DIM_PROMOCAO (SCD1)" as dim_promocao <<dim>> {
+  * chave_promocao : int <<PK>>
   --
-  special_offer_id : int (BK)
-  description : varchar
-  discount_pct : numeric
-  promotion_type : varchar
-  promotion_category : varchar
-  start_date : date
-  end_date : date
+  id_oferta_especial : int (BK)
+  descricao : varchar
+  percentual_desconto : numeric
+  tipo_promocao : varchar
+  categoria_promocao : varchar
+  data_inicio : date
+  data_fim : date
 }
 
-entity "DIM_SHIP_METHOD" as dim_ship_method <<dim>> {
-  * ship_method_key : int <<PK>>
+entity "DIM_METODO_ENVIO (SCD1)" as dim_metodo_envio <<dim>> {
+  * chave_metodo_envio : int <<PK>>
   --
-  ship_method_id : int (BK)
-  name : varchar
-  ship_base : numeric
-  ship_rate : numeric
+  id_metodo_envio : int (BK)
+  nome : varchar
+  base_envio : numeric
+  taxa_envio : numeric
 }
 
-dim_date ||--o{ fact_sales
-dim_customer ||--o{ fact_sales
-dim_product ||--o{ fact_sales
-dim_salesperson ||--o{ fact_sales
-dim_territory ||--o{ fact_sales
-dim_promotion ||--o{ fact_sales
-dim_ship_method ||--o{ fact_sales
+dim_data ||--o{ fato_vendas
+dim_cliente ||--o{ fato_vendas
+dim_produto ||--o{ fato_vendas
+dim_vendedor ||--o{ fato_vendas
+dim_territorio ||--o{ fato_vendas
+dim_promocao ||--o{ fato_vendas
+dim_metodo_envio ||--o{ fato_vendas
 
 @enduml
