@@ -1,13 +1,3 @@
--- =====================================================================
--- Projeto: Data Warehouse AdventureWorks - Indicadores (KPIs)
--- Arquivo: 02_kpis_queries.sql
--- Descrição: Consultas SQL que implementam os 10 indicadores definidos
---            no artigo, executadas sobre o schema dimensional dw.*
--- =====================================================================
-
--- ---------------------------------------------------------------------
--- KPI 01 - Receita Total de Vendas (Total Sales Revenue)
--- ---------------------------------------------------------------------
 SELECT
     d.ano,
     d.numero_mes,
@@ -18,9 +8,6 @@ JOIN dw.dim_data d ON d.chave_data = f.chave_data_pedido
 GROUP BY d.ano, d.numero_mes, d.nome_mes
 ORDER BY d.ano, d.numero_mes;
 
--- ---------------------------------------------------------------------
--- KPI 02 - Ticket Médio por Pedido (Average Order Value)
--- ---------------------------------------------------------------------
 SELECT
     d.ano,
     ROUND(SUM(f.total_linha) / COUNT(DISTINCT f.numero_pedido_venda), 2) AS ticket_medio
@@ -29,9 +16,6 @@ JOIN dw.dim_data d ON d.chave_data = f.chave_data_pedido
 GROUP BY d.ano
 ORDER BY d.ano;
 
--- ---------------------------------------------------------------------
--- KPI 03 - Quantidade Total de Itens Vendidos
--- ---------------------------------------------------------------------
 SELECT
     d.ano,
     d.trimestre,
@@ -41,9 +25,6 @@ JOIN dw.dim_data d ON d.chave_data = f.chave_data_pedido
 GROUP BY d.ano, d.trimestre
 ORDER BY d.ano, d.trimestre;
 
--- ---------------------------------------------------------------------
--- KPI 04 - Margem de Lucro Bruta (Gross Profit Margin %)
--- ---------------------------------------------------------------------
 SELECT
     p.nome_categoria,
     ROUND(SUM(f.total_linha), 2)                                    AS receita,
@@ -56,9 +37,6 @@ JOIN dw.dim_produto p ON p.chave_produto = f.chave_produto
 GROUP BY p.nome_categoria
 ORDER BY margem_pct DESC;
 
--- ---------------------------------------------------------------------
--- KPI 05 - Taxa de Desconto Média Aplicada (Average Discount Rate)
--- ---------------------------------------------------------------------
 SELECT
     d.ano,
     ROUND(100.0 * SUM(f.valor_desconto) / NULLIF(SUM(f.preco_unitario * f.quantidade_pedido), 0), 2)
@@ -68,9 +46,6 @@ JOIN dw.dim_data d ON d.chave_data = f.chave_data_pedido
 GROUP BY d.ano
 ORDER BY d.ano;
 
--- ---------------------------------------------------------------------
--- KPI 06 - Vendas por Território (Sales by Territory)
--- ---------------------------------------------------------------------
 SELECT
     t.grupo_territorio,
     t.nome_territorio,
@@ -81,9 +56,6 @@ JOIN dw.dim_territorio t ON t.chave_territorio = f.chave_territorio
 GROUP BY t.grupo_territorio, t.nome_territorio
 ORDER BY receita_total DESC;
 
--- ---------------------------------------------------------------------
--- KPI 07 - Top 10 Produtos Mais Vendidos (por receita)
--- ---------------------------------------------------------------------
 SELECT
     p.nome_produto,
     p.nome_categoria,
@@ -95,9 +67,6 @@ GROUP BY p.nome_produto, p.nome_categoria
 ORDER BY receita_total DESC
 LIMIT 10;
 
--- ---------------------------------------------------------------------
--- KPI 08 - Desempenho de Vendedores (Sales by Salesperson)
--- ---------------------------------------------------------------------
 SELECT
     v.nome_completo,
     v.cargo,
@@ -110,9 +79,6 @@ WHERE v.chave_vendedor <> -1
 GROUP BY v.nome_completo, v.cargo
 ORDER BY receita_total DESC;
 
--- ---------------------------------------------------------------------
--- KPI 09 - Taxa de Crescimento de Vendas Mês a Mês (MoM Growth %)
--- ---------------------------------------------------------------------
 WITH vendas_mes AS (
     SELECT d.ano, d.numero_mes,
            SUM(f.total_linha) AS receita_mes
@@ -127,9 +93,6 @@ SELECT
 FROM vendas_mes
 ORDER BY ano, numero_mes;
 
--- ---------------------------------------------------------------------
--- KPI 10 - Tempo Médio de Envio / Lead Time de Atendimento (dias)
--- ---------------------------------------------------------------------
 SELECT
     t.nome_territorio,
     ROUND(AVG(env.data_completa - ped.data_completa), 2) AS lead_time_medio_dias

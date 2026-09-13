@@ -1,27 +1,3 @@
-"""
-ETL Incremental - AdventureWorks (OLTP/SQL Server) -> Data Warehouse (PostgreSQL)
-==================================================================================
-
-Estratégia de carga incremental:
-    - Cada tabela de origem possui uma coluna `ModifiedDate` (padrão AdventureWorks).
-    - A cada execução, a ETL consulta `ctrl.etl_watermark` para saber a partir de
-      qual timestamp deve extrair (extração incremental baseada em watermark/CDC leve).
-    - Os registros extraídos (ModifiedDate > watermark) são gravados em STAGING.
-    - As dimensões são carregadas com SCD Tipo 2 (customer, product, salesperson)
-      via comparação de hash de atributos, e SCD Tipo 1 (territory, promotion,
-      ship_method) via UPSERT simples.
-    - O fato é carregado por UPSERT idempotente usando a chave natural
-      `sales_order_detail_id`, o que garante que reprocessamentos não dupliquem linhas.
-    - Ao final de cada etapa bem-sucedida, o watermark é avançado para o maior
-      ModifiedDate processado naquela execução.
-
-Uso:
-    python etl_incremental.py --full-load        # força carga completa (ignora watermark)
-    python etl_incremental.py                    # carga incremental normal (agendável via cron)
-
-Dependências:
-    pip install sqlalchemy pyodbc psycopg2-binary pandas python-dotenv
-"""
 import argparse
 import hashlib
 import logging
@@ -40,9 +16,6 @@ logging.basicConfig(
 )
 log = logging.getLogger("etl_adventureworks")
 
-# ---------------------------------------------------------------------------
-# Conexões
-# ---------------------------------------------------------------------------
 SRC_CONN_STR = os.getenv(
     "SRC_CONN_STR",
     "mssql+pyodbc://usuario:senha@servidor/AdventureWorks2016"
@@ -56,10 +29,6 @@ DW_CONN_STR = os.getenv(
 src_engine = create_engine(SRC_CONN_STR)
 dw_engine = create_engine(DW_CONN_STR)
 
-
-# ---------------------------------------------------------------------------
-# Utilidades de controle (watermark / log)
-# ---------------------------------------------------------------------------
 def get_watermark(table_name: str, full_load: bool) -> datetime:
     if full_load:
         return datetime(1900, 1, 1)
@@ -121,10 +90,6 @@ def row_hash(*values) -> str:
     raw = "|".join("" if v is None else str(v) for v in values)
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
 
-
-# ---------------------------------------------------------------------------
-# 1) EXTRAÇÃO -> STAGING (incremental por ModifiedDate)
-# ---------------------------------------------------------------------------
 EXTRACT_QUERIES = {
     "cliente": """
         SELECT c.CustomerID AS id_cliente,
@@ -213,10 +178,6 @@ def extract_to_staging(table_name: str, full_load: bool) -> tuple[int, datetime 
     log.info(f"[EXTRACT] {table_name}: {len(df)} linhas -> stg.{table_name} (novo watermark {new_watermark})")
     return len(df), new_watermark
 
-
-# ---------------------------------------------------------------------------
-# 2) CARGA DE DIMENSÕES
-# ---------------------------------------------------------------------------
 def load_dim_scd2(table: str, bk_col: str, attr_cols: list[str], stg_table: str):
     """Aplica SCD Tipo 2: expira a versão vigente e insere uma nova quando há mudança."""
     with dw_engine.begin() as conn:
@@ -281,10 +242,6 @@ def load_dim_scd1(table: str, bk_col: str, attr_cols: list[str], stg_table: str)
             )
         return len(staged)
 
-
-# ---------------------------------------------------------------------------
-# 3) CARGA DO FATO (UPSERT idempotente pela chave natural)
-# ---------------------------------------------------------------------------
 def load_fact_sales():
     with dw_engine.begin() as conn:
         staged = pd.read_sql(text("SELECT * FROM stg.detalhe_pedido_venda"), conn)
@@ -337,11 +294,7 @@ def load_fact_sales():
         for _, r in staged.iterrows():
             conn.execute(insert_sql, r.to_dict())
         return len(staged)
-
-
-# ---------------------------------------------------------------------------
-# Orquestração
-# ---------------------------------------------------------------------------
+        
 DIM_JOBS = [
     dict(name="cliente", table="dw.dim_cliente", bk="id_cliente",
          attrs=["nome_cliente", "tipo_cliente", "cidade", "estado_provincia", "pais_regiao", "codigo_postal"],
@@ -364,7 +317,6 @@ DIM_JOBS = [
 def run(full_load: bool = False):
     log.info("========== INÍCIO DA ETL INCREMENTAL - AdventureWorks DW ==========")
 
-    # 1. Extração das dimensões + fato para staging
     watermarks = {}
     for job in DIM_JOBS:
         rows, wm = extract_to_staging(job["name"], full_load)
@@ -373,7 +325,6 @@ def run(full_load: bool = False):
     fact_rows, fact_wm = extract_to_staging("detalhe_pedido_venda", full_load)
     watermarks["detalhe_pedido_venda"] = (fact_rows, fact_wm)
 
-    # 2. Carga das dimensões (deve ocorrer ANTES do fato, para resolver as FKs)
     for job in DIM_JOBS:
         rows, wm = watermarks[job["name"]]
         if rows == 0:
@@ -386,7 +337,6 @@ def run(full_load: bool = False):
         set_watermark(job["name"], wm, "SUCCESS", rows)
         log_step("etl_incremental", f"load_dim_{job['name']}", "SUCCESS", n)
 
-    # 3. Carga do fato
     rows, wm = watermarks["detalhe_pedido_venda"]
     if rows > 0:
         n = load_fact_sales()
