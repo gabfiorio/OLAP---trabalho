@@ -1,101 +1,113 @@
+import os
 import graphviz
 
-g = graphviz.Digraph('star_schema', format='png')
+g = graphviz.Digraph('esquema_estrela', format='png')
 g.attr(rankdir='TB', bgcolor='white', fontname='Helvetica', splines='ortho')
 g.attr('node', shape='plaintext', fontname='Helvetica')
 
-FACT_COLOR = "#003B53"
-DIM_COLOR = "#93BB25"
-HEADER_TEXT = "white"
+COR_FATO = "#003B53"
+COR_DIMENSAO = "#93BB25"
+TEXTO_CABECALHO = "white"
 
-def fact_table(name, title, cols):
-    rows = "".join(
-        f'<TR><TD ALIGN="LEFT" BGCOLOR="white"><FONT POINT-SIZE="11">{c}</FONT></TD></TR>'
-        for c in cols
+
+def tabela_fato(nome, titulo, colunas):
+    linhas = "".join(
+        f'<TR><TD ALIGN="LEFT" BGCOLOR="white"><FONT POINT-SIZE="11">{coluna}</FONT></TD></TR>'
+        for coluna in colunas
     )
     label = f'''<
-    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="white" COLOR="{FACT_COLOR}">
-    <TR><TD BGCOLOR="{FACT_COLOR}"><FONT COLOR="{HEADER_TEXT}" POINT-SIZE="13"><B>{title}</B></FONT></TD></TR>
-    {rows}
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="white" COLOR="{COR_FATO}">
+    <TR><TD BGCOLOR="{COR_FATO}"><FONT COLOR="{TEXTO_CABECALHO}" POINT-SIZE="13"><B>{titulo}</B></FONT></TD></TR>
+    {linhas}
     </TABLE>>'''
-    g.node(name, label=label)
+    g.node(nome, label=label)
 
-def dim_table(name, title, cols):
-    rows = "".join(
-        f'<TR><TD ALIGN="LEFT" BGCOLOR="white"><FONT POINT-SIZE="11">{c}</FONT></TD></TR>'
-        for c in cols
+
+def tabela_dimensao(nome, titulo, colunas):
+    linhas = "".join(
+        f'<TR><TD ALIGN="LEFT" BGCOLOR="white"><FONT POINT-SIZE="11">{coluna}</FONT></TD></TR>'
+        for coluna in colunas
     )
     label = f'''<
-    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="white" COLOR="{DIM_COLOR}">
-    <TR><TD BGCOLOR="{DIM_COLOR}"><FONT COLOR="white" POINT-SIZE="13"><B>{title}</B></FONT></TD></TR>
-    {rows}
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="white" COLOR="{COR_DIMENSAO}">
+    <TR><TD BGCOLOR="{COR_DIMENSAO}"><FONT COLOR="white" POINT-SIZE="13"><B>{titulo}</B></FONT></TD></TR>
+    {linhas}
     </TABLE>>'''
-    g.node(name, label=label)
+    g.node(nome, label=label)
 
-fact_table("fact_sales", "FACT_SALES", [
-    "PK sales_key",
-    "FK order_date_key",
-    "FK ship_date_key",
-    "FK due_date_key",
-    "FK customer_key",
-    "FK product_key",
-    "FK salesperson_key",
-    "FK territory_key",
-    "FK promotion_key",
-    "FK ship_method_key",
-    "sales_order_number (DD)",
-    "sales_order_line_number (DD)",
-    "order_qty",
-    "unit_price",
-    "unit_price_discount",
-    "discount_amount",
-    "line_total",
-    "standard_cost",
-    "tax_amt",
-    "freight",
-])
 
-dim_table("dim_date", "DIM_DATE", [
-    "PK date_key",
-    "full_date", "day_of_month", "day_name",
-    "month_number", "month_name", "quarter",
-    "year", "is_weekend", "fiscal_year", "fiscal_quarter",
-])
-dim_table("dim_customer", "DIM_CUSTOMER (SCD2)", [
-    "PK customer_key", "customer_id (BK)",
-    "customer_name", "customer_type",
-    "city", "state_province", "country_region",
-    "postal_code", "effective_date", "end_date", "is_current",
-])
-dim_table("dim_product", "DIM_PRODUCT (SCD2)", [
-    "PK product_key", "product_id (BK)",
-    "product_name", "product_number", "color", "size",
-    "subcategory_name", "category_name",
-    "standard_cost", "list_price",
-    "effective_date", "end_date", "is_current",
-])
-dim_table("dim_salesperson", "DIM_SALESPERSON (SCD2)", [
-    "PK salesperson_key", "employee_id (BK)",
-    "full_name", "job_title",
-    "effective_date", "end_date", "is_current",
-])
-dim_table("dim_territory", "DIM_TERRITORY", [
-    "PK territory_key", "territory_id (BK)",
-    "territory_name", "country_region_code", "territory_group",
-])
-dim_table("dim_promotion", "DIM_PROMOTION", [
-    "PK promotion_key", "special_offer_id (BK)",
-    "description", "discount_pct", "promotion_type",
-    "promotion_category", "start_date", "end_date",
-])
-dim_table("dim_ship_method", "DIM_SHIP_METHOD", [
-    "PK ship_method_key", "ship_method_id (BK)",
-    "name", "ship_base", "ship_rate",
+tabela_fato("fato_vendas", "FATO_VENDAS", [
+    "PK chave_venda",
+    "FK chave_data_pedido",
+    "FK chave_data_entrega",
+    "FK chave_data_vencimento",
+    "FK chave_cliente",
+    "FK chave_produto",
+    "FK chave_vendedor",
+    "FK chave_territorio",
+    "FK chave_promocao",
+    "FK chave_metodo_envio",
+    "numero_pedido_venda (DD)",
+    "numero_linha_pedido (DD)",
+    "quantidade_pedido",
+    "preco_unitario",
+    "desconto_unitario",
+    "valor_desconto",
+    "total_linha",
+    "custo_padrao",
+    "valor_imposto",
+    "frete",
 ])
 
-for d in ["dim_date", "dim_customer", "dim_product", "dim_salesperson",
-          "dim_territory", "dim_promotion", "dim_ship_method"]:
-    g.edge(d, "fact_sales", arrowhead="none", color="#666666")
 
-g.render('/home/claude/aw_dw_project/diagrams/star_schema', format='png', cleanup=True)
-print("done")
+tabela_dimensao("dim_data", "DIM_DATA", [
+    "PK chave_data",
+    "data_completa", "dia_do_mes", "nome_dia",
+    "numero_mes", "nome_mes", "trimestre",
+    "ano", "eh_fim_de_semana", "ano_fiscal", "trimestre_fiscal",
+])
+
+tabela_dimensao("dim_cliente", "DIM_CLIENTE (SCD2)", [
+    "PK chave_cliente", "cliente_id (BK)",
+    "nome_cliente", "tipo_cliente",
+    "cidade", "estado_provincia", "regiao_pais",
+    "codigo_postal", "data_efetiva", "data_fim", "eh_atual",
+])
+
+tabela_dimensao("dim_produto", "DIM_PRODUTO (SCD2)", [
+    "PK chave_produto", "produto_id (BK)",
+    "nome_produto", "numero_produto", "cor", "tamanho",
+    "nome_subcategoria", "nome_categoria",
+    "custo_padrao", "preco_tabela",
+    "data_efetiva", "data_fim", "eh_atual",
+])
+
+tabela_dimensao("dim_vendedor", "DIM_VENDEDOR (SCD2)", [
+    "PK chave_vendedor", "funcionario_id (BK)",
+    "nome_completo", "cargo",
+    "data_efetiva", "data_fim", "eh_atual",
+])
+
+tabela_dimensao("dim_territorio", "DIM_TERRITORIO", [
+    "PK chave_territorio", "territorio_id (BK)",
+    "nome_territorio", "codigo_regiao_pais", "grupo_territorio",
+])
+
+tabela_dimensao("dim_promocao", "DIM_PROMOCAO", [
+    "PK chave_promocao", "oferta_especial_id (BK)",
+    "descricao", "percentual_desconto", "tipo_promocao",
+    "categoria_promocao", "data_inicio", "data_fim",
+])
+
+tabela_dimensao("dim_metodo_envio", "DIM_METODO_ENVIO", [
+    "PK chave_metodo_envio", "metodo_envio_id (BK)",
+    "nome", "custo_base", "tarifa_envio",
+])
+
+for d in ["dim_data", "dim_cliente", "dim_produto", "dim_vendedor",
+          "dim_territorio", "dim_promocao", "dim_metodo_envio"]:
+    g.edge(d, "fato_vendas", arrowhead="none", color="#666666")
+
+caminho_saida = os.path.join(os.path.dirname(__file__), 'esquema_estrela')
+g.render(caminho_saida, format='png', cleanup=True)
+print("concluído")

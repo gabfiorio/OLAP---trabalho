@@ -70,4 +70,4 @@ if __name__ == "__main__":
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM dw.dim_data"))
         df.to_sql("dim_data", conn, schema="dw", if_exists="append", index=False)
-    print(f"dw.dim_data populada com {len(df)} datas ({args.start} a {args.end}).")}
+    print(f"dw.dim_data populada com {len(df)} datas ({args.start} a {args.end}).")
