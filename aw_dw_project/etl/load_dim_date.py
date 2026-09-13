@@ -1,11 +1,3 @@
-"""
-Popula dw.dim_data com um intervalo de datas (carga única / não incremental).
-A dimensão calendário não sofre atualização incremental: é gerada uma vez
-cobrindo todo o horizonte de dados da origem (ex.: 2005-01-01 a 2030-12-31).
-
-Uso:
-    python load_dim_date.py --start 2005-01-01 --end 2030-12-31
-"""
 import argparse
 from datetime import date, timedelta
 
@@ -27,7 +19,7 @@ MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho",
 
 
 def fiscal_year_quarter(d: date):
-    # Ano fiscal AdventureWorks: inicia em 1º de julho
+    
     if d.month >= 7:
         fy = d.year + 1
         fq = ((d.month - 7) // 3) + 1
