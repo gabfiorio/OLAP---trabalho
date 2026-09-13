@@ -1,0 +1,137 @@
+@startuml star_schema
+!define FACT_COLOR #003B53
+!define DIM_COLOR #93BB25
+
+skinparam backgroundColor white
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor<<fact>> FACT_COLOR
+  FontColor<<fact>> white
+  BackgroundColor<<dim>> DIM_COLOR
+  FontColor<<dim>> white
+  BorderColor #666666
+  ArrowColor #666666
+}
+
+entity "FACT_SALES" as fact_sales <<fact>> {
+  * sales_key : bigint <<PK>>
+  --
+  # order_date_key : int <<FK>>
+  # ship_date_key : int <<FK>>
+  # due_date_key : int <<FK>>
+  # customer_key : int <<FK>>
+  # product_key : int <<FK>>
+  # salesperson_key : int <<FK>>
+  # territory_key : int <<FK>>
+  # promotion_key : int <<FK>>
+  # ship_method_key : int <<FK>>
+  --
+  sales_order_number : varchar (DD)
+  sales_order_line_number : smallint (DD)
+  order_qty : int
+  unit_price : numeric
+  unit_price_discount : numeric
+  discount_amount : numeric
+  line_total : numeric
+  standard_cost : numeric
+  tax_amt : numeric
+  freight : numeric
+}
+
+entity "DIM_DATE" as dim_date <<dim>> {
+  * date_key : int <<PK>>
+  --
+  full_date : date
+  day_of_month : smallint
+  day_name : varchar
+  month_number : smallint
+  month_name : varchar
+  quarter : smallint
+  year : smallint
+  is_weekend : boolean
+  fiscal_year : smallint
+  fiscal_quarter : smallint
+}
+
+entity "DIM_CUSTOMER (SCD2)" as dim_customer <<dim>> {
+  * customer_key : int <<PK>>
+  --
+  customer_id : int (BK)
+  customer_name : varchar
+  customer_type : varchar
+  city : varchar
+  state_province : varchar
+  country_region : varchar
+  postal_code : varchar
+  effective_date : date
+  end_date : date
+  is_current : boolean
+}
+
+entity "DIM_PRODUCT (SCD2)" as dim_product <<dim>> {
+  * product_key : int <<PK>>
+  --
+  product_id : int (BK)
+  product_name : varchar
+  product_number : varchar
+  color : varchar
+  size : varchar
+  subcategory_name : varchar
+  category_name : varchar
+  standard_cost : numeric
+  list_price : numeric
+  effective_date : date
+  end_date : date
+  is_current : boolean
+}
+
+entity "DIM_SALESPERSON (SCD2)" as dim_salesperson <<dim>> {
+  * salesperson_key : int <<PK>>
+  --
+  employee_id : int (BK)
+  full_name : varchar
+  job_title : varchar
+  effective_date : date
+  end_date : date
+  is_current : boolean
+}
+
+entity "DIM_TERRITORY" as dim_territory <<dim>> {
+  * territory_key : int <<PK>>
+  --
+  territory_id : int (BK)
+  territory_name : varchar
+  country_region_code : varchar
+  territory_group : varchar
+}
+
+entity "DIM_PROMOTION" as dim_promotion <<dim>> {
+  * promotion_key : int <<PK>>
+  --
+  special_offer_id : int (BK)
+  description : varchar
+  discount_pct : numeric
+  promotion_type : varchar
+  promotion_category : varchar
+  start_date : date
+  end_date : date
+}
+
+entity "DIM_SHIP_METHOD" as dim_ship_method <<dim>> {
+  * ship_method_key : int <<PK>>
+  --
+  ship_method_id : int (BK)
+  name : varchar
+  ship_base : numeric
+  ship_rate : numeric
+}
+
+dim_date ||--o{ fact_sales
+dim_customer ||--o{ fact_sales
+dim_product ||--o{ fact_sales
+dim_salesperson ||--o{ fact_sales
+dim_territory ||--o{ fact_sales
+dim_promotion ||--o{ fact_sales
+dim_ship_method ||--o{ fact_sales
+
+@enduml
