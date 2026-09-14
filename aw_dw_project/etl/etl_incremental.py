@@ -984,9 +984,7 @@ def load_dim_date(staged: pd.DataFrame):
     Garante que todas as datas utilizadas pela fato
     existam na dimensão calendário.
 
-    A tabela dim_data precisa possuir pelo menos:
-        chave_data
-        data_completa
+    Popula tambem os atributos derivados exigidos por dw.dim_data.
     """
 
     if staged.empty:
@@ -1023,6 +1021,31 @@ def load_dim_date(staged: pd.DataFrame):
 
     total = 0
 
+    nomes_dias = [
+        "Segunda-feira",
+        "Terca-feira",
+        "Quarta-feira",
+        "Quinta-feira",
+        "Sexta-feira",
+        "Sabado",
+        "Domingo",
+    ]
+
+    nomes_meses = [
+        "Janeiro",
+        "Fevereiro",
+        "Marco",
+        "Abril",
+        "Maio",
+        "Junho",
+        "Julho",
+        "Agosto",
+        "Setembro",
+        "Outubro",
+        "Novembro",
+        "Dezembro",
+    ]
+
     with dw_engine.begin() as conn:
 
         data_atual = data_min
@@ -1033,18 +1056,45 @@ def load_dim_date(staged: pd.DataFrame):
                 data_atual.strftime("%Y%m%d")
             )
 
+            if data_atual.month >= 7:
+                ano_fiscal = data_atual.year + 1
+                trimestre_fiscal = ((data_atual.month - 7) // 3) + 1
+            else:
+                ano_fiscal = data_atual.year
+                trimestre_fiscal = ((data_atual.month + 5) // 3) + 1
+
             conn.execute(
                 text(
                     """
                     INSERT INTO dw.dim_data
                     (
                         chave_data,
-                        data_completa
+                        data_completa,
+                        dia_mes,
+                        nome_dia,
+                        dia_semana,
+                        numero_mes,
+                        nome_mes,
+                        trimestre,
+                        ano,
+                        eh_fim_de_semana,
+                        ano_fiscal,
+                        trimestre_fiscal
                     )
                     VALUES
                     (
                         :chave,
-                        :data
+                        :data,
+                        :dia_mes,
+                        :nome_dia,
+                        :dia_semana,
+                        :numero_mes,
+                        :nome_mes,
+                        :trimestre,
+                        :ano,
+                        :eh_fim_de_semana,
+                        :ano_fiscal,
+                        :trimestre_fiscal
                     )
 
                     ON CONFLICT (chave_data)
@@ -1054,6 +1104,16 @@ def load_dim_date(staged: pd.DataFrame):
                 {
                     "chave": chave,
                     "data": data_atual,
+                    "dia_mes": data_atual.day,
+                    "nome_dia": nomes_dias[data_atual.weekday()],
+                    "dia_semana": data_atual.weekday() + 1,
+                    "numero_mes": data_atual.month,
+                    "nome_mes": nomes_meses[data_atual.month - 1],
+                    "trimestre": (data_atual.month - 1) // 3 + 1,
+                    "ano": data_atual.year,
+                    "eh_fim_de_semana": data_atual.weekday() >= 5,
+                    "ano_fiscal": ano_fiscal,
+                    "trimestre_fiscal": trimestre_fiscal,
                 },
             )
 

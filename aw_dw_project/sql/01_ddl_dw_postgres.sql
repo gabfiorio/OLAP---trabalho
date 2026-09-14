@@ -166,10 +166,30 @@ CREATE INDEX IF NOT EXISTS ix_fato_vendas_vendedor   ON dw.fato_vendas (chave_ve
 CREATE INDEX IF NOT EXISTS ix_fato_vendas_territorio ON dw.fato_vendas (chave_territorio);
 
 CREATE TABLE IF NOT EXISTS stg.cliente (
-    id_cliente INTEGER, nome_pessoa VARCHAR(150), nome_loja VARCHAR(150),
+    id_cliente INTEGER, nome_cliente VARCHAR(150), nome_loja VARCHAR(150),
     tipo_cliente VARCHAR(20), cidade VARCHAR(100), estado_provincia VARCHAR(100),
     pais_regiao VARCHAR(100), codigo_postal VARCHAR(20), data_modificacao TIMESTAMP
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'stg'
+          AND table_name = 'cliente'
+          AND column_name = 'nome_pessoa'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'stg'
+          AND table_name = 'cliente'
+          AND column_name = 'nome_cliente'
+    ) THEN
+        ALTER TABLE stg.cliente
+            RENAME COLUMN nome_pessoa TO nome_cliente;
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS stg.produto (
     id_produto INTEGER, nome_produto VARCHAR(150), numero_produto VARCHAR(30),
