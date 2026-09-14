@@ -2,7 +2,7 @@
 .venv/
 venv/
 env/
-
+venv
 # Variáveis de ambiente e credenciais
 .env
 .env.*
