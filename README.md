@@ -1,6 +1,6 @@
 # Data Warehouse AdventureWorks — Star Schema + ETL Incremental
 
-Projeto acadêmico (padrão Unisales) de construção de um Data Warehouse dimensional
+Projeto acadêmico de construção de um Data Warehouse dimensional
 para o domínio de **Vendas** da base OLTP **AdventureWorks2016**, com processo de
 ETL incremental em Python e implementação do DW em **PostgreSQL**.
 
